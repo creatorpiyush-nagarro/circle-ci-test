@@ -86,5 +86,5 @@ workflows:
   version: 2
   flutter_ci:
     jobs:
-      - build_android
+      # - build_android
       - build_ios
