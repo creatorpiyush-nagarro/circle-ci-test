@@ -1,0 +1,37 @@
+version: 2.1
+
+jobs:
+  build_and_test:
+    docker:
+      - image: ghcr.io/cirruslabs/flutter:stable
+    steps:
+      - checkout
+      - run:
+          name: "Install FVM"
+          command: |
+            dart pub global activate fvm
+            echo 'export PATH="$HOME/.pub-cache/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: "Install project Flutter version"
+          command: fvm install
+      - run:
+          name: "Flutter pub get"
+          command: fvm flutter pub get
+      - run:
+          name: "Run Flutter tests with coverage"
+          command: fvm flutter test --coverage
+      - run:
+          name: "Build Android APK"
+          command: fvm flutter build apk --debug
+      - store_artifacts:
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          destination: app-debug.apk
+      - store_artifacts:
+          path: coverage/lcov.info
+          destination: coverage-report.info
+
+workflows:
+  version: 2
+  flutter_ci:
+    jobs:
+      - build_and_test
