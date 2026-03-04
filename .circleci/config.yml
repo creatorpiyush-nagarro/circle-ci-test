@@ -25,8 +25,8 @@ jobs:
             - ".fvm/flutter_sdk"
             - "~/.fvm"
       - run:
-        name: "Flutter doctor"
-        command: fvm flutter doctor
+          name: "Flutter doctor"
+          command: fvm flutter doctor
       - run:
           name: "Flutter pub get"
           command: fvm flutter pub get
