@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build_android:
     docker:
-      - image: cimg/android:2024.04
+      - image: cimg/android:2024.11.1
     steps:
       - checkout
       - restore_cache:
@@ -25,6 +25,9 @@ jobs:
             - ".fvm/flutter_sdk"
             - "~/.fvm"
       - run:
+        name: "Flutter doctor"
+        command: fvm flutter doctor
+      - run:
           name: "Flutter pub get"
           command: fvm flutter pub get
       - run:
@@ -32,6 +35,9 @@ jobs:
           command: fvm flutter test --coverage
       - store_test_results:
           path: coverage/lcov.info
+      - run:
+          name: "Install dependencies (Ninja Build)"
+          command: sudo apt-get update && sudo apt-get install -y ninja-build
       - run:
           name: "Build Android APK"
           command: fvm flutter build apk --debug
@@ -44,7 +50,7 @@ jobs:
 
   build_ios:
     macos:
-      xcode: 16.2.0
+      xcode: 26.2.0
     steps:
       - checkout
       - restore_cache:
@@ -66,6 +72,9 @@ jobs:
           paths:
             - ".fvm/flutter_sdk"
             - "~/.fvm"
+      - run:
+          name: "Flutter doctor"
+          command: fvm flutter doctor
       - run:
           name: "Flutter pub get"
           command: fvm flutter pub get
