@@ -1,9 +1,50 @@
 version: 2.1
 
 jobs:
-  build_all:
+  build_android:
+    docker:
+      - image: cimg/android:2024.04
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - fvm-cache-{{ checksum ".fvmrc" }}
+            - fvm-cache-
+      - run:
+          name: "Install FVM"
+          command: |
+            curl -fsSL https://fvm.app/install.sh | bash
+            echo 'export PATH="$HOME/fvm/bin:$PATH"' >> $BASH_ENV
+            echo 'export FVM_CACHE_PATH="$HOME/.fvm/versions"' >> $BASH_ENV
+      - run:
+          name: "Install project Flutter version"
+          command: fvm install
+      - save_cache:
+          key: fvm-cache-{{ checksum ".fvmrc" }}
+          paths:
+            - ".fvm/flutter_sdk"
+            - "~/.fvm"
+      - run:
+          name: "Flutter pub get"
+          command: fvm flutter pub get
+      - run:
+          name: "Run Flutter tests with coverage"
+          command: fvm flutter test --coverage
+      - store_test_results:
+          path: coverage/lcov.info
+      - run:
+          name: "Build Android APK"
+          command: fvm flutter build apk --debug
+      - store_artifacts:
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          destination: app-debug.apk
+      - store_artifacts:
+          path: coverage/lcov.info
+          destination: coverage-report.info
+
+  build_ios:
     macos:
-      xcode: 26.2.0
+      xcode: 16.2.0
     steps:
       - checkout
       - restore_cache:
@@ -29,25 +70,12 @@ jobs:
           name: "Flutter pub get"
           command: fvm flutter pub get
       - run:
-          name: "Run Flutter tests with coverage"
-          command: fvm flutter test --coverage
-      - store_test_results:
-          path: coverage/lcov.info
-      - run:
-          name: "Build Android APK"
-          command: fvm flutter build apk --debug
-      - run:
           name: "Build iOS (No Codesign)"
           command: fvm flutter build ios --no-codesign --release
-      - store_artifacts:
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          destination: app-debug.apk
-      - store_artifacts:
-          path: coverage/lcov.info
-          destination: coverage-report.info
 
 workflows:
   version: 2
   flutter_ci:
     jobs:
-      - build_all
+      - build_android
+      - build_ios
