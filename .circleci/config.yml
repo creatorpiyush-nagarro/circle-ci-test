@@ -3,17 +3,27 @@ version: 2.1
 jobs:
   build_and_test:
     docker:
-      - image: ghcr.io/cirruslabs/flutter:stable
+      - image: cimg/android:2024.04
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - fvm-cache-{{ checksum ".fvmrc" }}
+            - fvm-cache-
       - run:
           name: "Install FVM"
           command: |
-            dart pub global activate fvm
-            echo 'export PATH="$HOME/.pub-cache/bin:$PATH"' >> $BASH_ENV
+            curl -fsSL https://fvm.app/install.sh | bash
+            echo 'export PATH="$HOME/fvm/bin:$PATH"' >> $BASH_ENV
+            echo 'export FVM_CACHE_PATH="$HOME/.fvm/versions"' >> $BASH_ENV
       - run:
           name: "Install project Flutter version"
           command: fvm install
+      - save_cache:
+          key: fvm-cache-{{ checksum ".fvmrc" }}
+          paths:
+            - ".fvm/flutter_sdk"
+            - "~/.fvm"
       - run:
           name: "Flutter pub get"
           command: fvm flutter pub get
@@ -30,8 +40,40 @@ jobs:
           path: coverage/lcov.info
           destination: coverage-report.info
 
+  build_ios:
+    macos:
+      xcode: 15.3.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - fvm-cache-macos-{{ checksum ".fvmrc" }}
+            - fvm-cache-macos-
+      - run:
+          name: "Install FVM"
+          command: |
+            brew tap leoafarias/fvm
+            brew install fvm
+            echo 'export PATH="$HOME/fvm/bin:$PATH"' >> $BASH_ENV
+            echo 'export FVM_CACHE_PATH="$HOME/.fvm/versions"' >> $BASH_ENV
+      - run:
+          name: "Install project Flutter version"
+          command: fvm install
+      - save_cache:
+          key: fvm-cache-macos-{{ checksum ".fvmrc" }}
+          paths:
+            - ".fvm/flutter_sdk"
+            - "~/.fvm"
+      - run:
+          name: "Flutter pub get"
+          command: fvm flutter pub get
+      - run:
+          name: "Build iOS (No Codesign)"
+          command: fvm flutter build ios --no-codesign --release
+
 workflows:
   version: 2
   flutter_ci:
     jobs:
       - build_and_test
+      - build_ios
